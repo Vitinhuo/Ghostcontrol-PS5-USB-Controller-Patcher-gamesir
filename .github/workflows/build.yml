@@ -1,0 +1,37 @@
+name: Build payload (G7 Pro)
+
+on:
+  workflow_dispatch:      # botao "Run workflow" na aba Actions
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar compilador
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 wget unzip make
+
+      - name: Instalar ps5-payload-sdk
+        run: |
+          wget -q https://github.com/ps5-payload-dev/sdk/releases/latest/download/ps5-payload-sdk.zip
+          sudo unzip -q -d /opt ps5-payload-sdk.zip
+
+      - name: Compilar
+        env:
+          PS5_PAYLOAD_SDK: /opt/ps5-payload-sdk
+        run: make -C payload
+
+      - name: Listar ELFs gerados
+        run: find . -name "*.elf" -newer payload/gc_main.c -print
+
+      - name: Guardar o ELF
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghostcontrol-g7pro
+          path: payload/**/*.elf
+          if-no-files-found: error
